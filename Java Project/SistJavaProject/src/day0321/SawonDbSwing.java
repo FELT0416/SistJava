@@ -185,4 +185,25 @@ public class SawonDbSwing extends JFrame implements ItemListener, ActionListener
             }
         }
     }
+
+
+    public int getCurrentPeopleCount(int courseId) {
+        int count = 0;
+        // Database connection and query logic to count the rows in coursereg
+        String query = "SELECT COUNT(*) FROM coursereg WHERE course_Id = ?";
+        try (Connection conn = db.getConnecton();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, courseId);  // Set the courseId parameter
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    count = rs.getInt(1);  // Get the count value
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return count;
+    }
+
+
 }

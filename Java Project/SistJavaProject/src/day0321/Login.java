@@ -12,7 +12,7 @@ public class Login extends JFrame {
     private JButton loginButton;
     DbConnect db = new DbConnect();
 
-    private Login(){
+    public Login(){
 
         setTitle("Login");
         setSize(300, 200);
@@ -48,7 +48,7 @@ public class Login extends JFrame {
             // Validate user credentials
             if (validateLogin(userId, password)) {
                 isAdmin = getUserAdminStatus(userId);
-                JOptionPane.showMessageDialog(Login.this, "Login Successful!");
+                JOptionPane.showMessageDialog(Login.this, "로그인 성공!");
                 setVisible(false);
                 dispose();
 

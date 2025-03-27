@@ -18,7 +18,7 @@ public class Course extends JFrame implements ItemListener, ActionListener {
     private JTable courseTable, stuTable;
     Container cp;
     JLabel hak, lbl;
-    JButton btnAdd, btnDel, adminAdd, adminDel;
+    JButton btnAdd, btnDel, adminAdd, adminDel, logout;
     private int userId;
     private int isAdmin;
 
@@ -88,6 +88,12 @@ public class Course extends JFrame implements ItemListener, ActionListener {
         this.btnAdd.addActionListener(this);
         this.add(this.btnAdd);
 
+
+        this.logout = new JButton("로그아웃");
+        this.logout.setBounds(500, 10, 100, 30);
+        this.logout.addActionListener(this);
+        this.add(this.logout);
+
     }
 
 
@@ -110,10 +116,14 @@ public class Course extends JFrame implements ItemListener, ActionListener {
 
 
     public void courseTableSelect(int select) {
-        String sql = "";
-        if (select == 1) {
-            sql = "select ROWNUM no,course_id id,course_name name,instructor inst, max, cur from courses";
-        }
+        String sql = "SELECT " +
+                "ROWNUM no, " +
+                "c.course_id id, " +
+                "c.course_name name, " +
+                "c.instructor inst, " +
+                "c.max, " +
+                "(SELECT COUNT(*) FROM coursereg cr WHERE cr.course_id = c.course_id) AS cur " +
+                "FROM courses c";
 
         Connection conn = this.db.getConnecton();
         PreparedStatement pstmt = null;
@@ -131,7 +141,7 @@ public class Course extends JFrame implements ItemListener, ActionListener {
                 data.add(rs.getString("name"));
                 data.add(rs.getString("inst"));
                 data.add(rs.getString("max"));
-                data.add(rs.getString("cur"));
+                data.add(rs.getString("cur")); // Now dynamically calculated
                 this.courseModel.addRow(data);
             }
         } catch (SQLException e) {
@@ -139,16 +149,16 @@ public class Course extends JFrame implements ItemListener, ActionListener {
         } finally {
             this.db.dbClose(rs, pstmt, conn);
         }
-
     }
 
 
 
     public void stuTableSelect() {
-        String sql = "select rownum no, c.course_id id, c.course_name name, c.instructor inst, c.max, c.cur " +
-                "from Courses c " +
-                "join courseReg cr on c.course_id = cr.course_id " +
-                "where cr.student_id = ?";
+        String sql = "SELECT rownum no, c.course_id id, c.course_name name, c.instructor inst, c.max, " +
+                "(SELECT COUNT(*) FROM coursereg cr2 WHERE cr2.course_id = c.course_id) AS cur " +
+                "FROM Courses c " +
+                "JOIN courseReg cr ON c.course_id = cr.course_id " +
+                "WHERE cr.student_id = ?";
         Connection conn = db.getConnecton();  // adjust the method name if needed
         PreparedStatement pstmt = null;
         ResultSet rs = null;
@@ -224,20 +234,31 @@ public class Course extends JFrame implements ItemListener, ActionListener {
             }
 
             String courseId = (String) courseModel.getValueAt(row, 1); // Assuming course_id is in column 1
+            int maxs = Integer.parseInt((String) courseModel.getValueAt(row, 4));
+            int curs = Integer.parseInt((String) courseModel.getValueAt(row, 5));
 
-            int id = Integer.parseInt(courseId);
+            if (curs >=maxs){
+                JOptionPane.showMessageDialog(this, "정원이 초과 되었습니다.", "정원 초과", JOptionPane.ERROR_MESSAGE);
 
-            try {
-                pstmt = conn.prepareStatement(sql);
-                pstmt.setInt(1, this.userId);
-                pstmt.setInt(2, id);
-                pstmt.execute();
-                this.stuTableSelect();
-            } catch (SQLIntegrityConstraintViolationException e2) {
-                JOptionPane.showMessageDialog(this, "이미 신청한 과목입니다. 다른 과목을 선택하세요.", "중복 오류", JOptionPane.ERROR_MESSAGE);
-            } catch (SQLException e1) {
-                JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + e1.getMessage(), "오류", JOptionPane.ERROR_MESSAGE);
-                e1.printStackTrace();
+            }
+            else {
+
+                int id = Integer.parseInt(courseId);
+
+
+                try {
+                    pstmt = conn.prepareStatement(sql);
+                    pstmt.setInt(1, this.userId);
+                    pstmt.setInt(2, id);
+                    pstmt.execute();
+                    this.stuTableSelect();
+                    this.courseTableSelect(1);
+                } catch (SQLIntegrityConstraintViolationException e2) {
+                    JOptionPane.showMessageDialog(this, "이미 신청한 과목입니다. 다른 과목을 선택하세요.", "중복 오류", JOptionPane.ERROR_MESSAGE);
+                } catch (SQLException e1) {
+                    JOptionPane.showMessageDialog(this, "데이터베이스 오류: " + e1.getMessage(), "오류", JOptionPane.ERROR_MESSAGE);
+                    e1.printStackTrace();
+                }
             }
         }
 
@@ -261,7 +282,7 @@ public class Course extends JFrame implements ItemListener, ActionListener {
 
                 if (result > 0) {
                     JOptionPane.showMessageDialog(this, "과목이 삭제되었습니다.");
-                    courseModel.removeRow(row); // Remove from table UI
+                    this.courseTableSelect(1);
                     this.stuTableSelect();
                 } else {
                     JOptionPane.showMessageDialog(this, "삭제할 과목을 찾을 수 없습니다.");
@@ -271,9 +292,11 @@ public class Course extends JFrame implements ItemListener, ActionListener {
             } finally {
                 db.dbClose(null, pstmt, conn);
             }
-
-
-
+        }
+        else if (ob == this.logout){
+            dispose();
+            Login loginWindow = new Login();
+            loginWindow.setVisible(true);
         }
 
 
@@ -287,7 +310,7 @@ public class Course extends JFrame implements ItemListener, ActionListener {
     }
 
     public static void main(String[] args) {
-        new Course("20250000", 0,"수강신청 DB");
+        new Course("20250000", 1,"수강신청 DB");
     }
 
 
@@ -350,8 +373,3 @@ public class Course extends JFrame implements ItemListener, ActionListener {
 
 
 }
-
-
-
-
-
