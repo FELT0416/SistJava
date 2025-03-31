@@ -18,15 +18,17 @@ public class Course extends JFrame implements ItemListener, ActionListener {
     private JTable courseTable, stuTable;
     Container cp;
     JLabel hak, lbl;
-    JButton btnAdd, btnDel, adminAdd, adminDel, logout;
+    JButton btnAdd, btnDel, adminAdd, adminDel, logout, btnUpdate;;
     private int userId;
     private int isAdmin;
+    private String name;
 
 
-    public Course(String userId, int isAdmin, String title) {
+    public Course(String userId, int isAdmin, String name, String title) {
         super(title);
         this.userId = Integer.parseInt(userId);
         this.isAdmin = isAdmin;
+        this.name = name;
         System.out.println(userId+" "+isAdmin);
         this.setBounds(10, 100, 1600, 900);
         this.cp = this.getContentPane();
@@ -52,13 +54,22 @@ public class Course extends JFrame implements ItemListener, ActionListener {
         };
         this.courseTable = new JTable(this.courseModel);
         this.courseTable.setAutoCreateRowSorter(true);
-        this.courseTable.getColumnModel().getColumn(0).setPreferredWidth(10);
-        this.courseTable.getColumnModel().getColumn(1).setPreferredWidth(10);
+
+        this.courseTable.getColumnModel().getColumn(0).setMinWidth(0);
+        this.courseTable.getColumnModel().getColumn(0).setMaxWidth(0);
+        this.courseTable.getColumnModel().getColumn(0).setWidth(0);
+        this.courseTable.getColumnModel().getColumn(1).setPreferredWidth(50);  // 과목 ID
+        this.courseTable.getColumnModel().getColumn(2).setPreferredWidth(200); // 과목명
+        this.courseTable.getColumnModel().getColumn(3).setPreferredWidth(100); // 담당교수
+        this.courseTable.getColumnModel().getColumn(4).setPreferredWidth(50);  // 정원
+        this.courseTable.getColumnModel().getColumn(5).setPreferredWidth(50);  // 현재 인원
+        this.courseTable.setRowHeight(25);
+
         JScrollPane js = new JScrollPane(this.courseTable);
         js.setBounds(10, 50, 1570, 500);
         this.add(js);
 
-        String welcome = "안녕하세요 "+userId+"님";
+        String welcome = "안녕하세요 "+name+"님";
         this.hak = new JLabel(welcome);
         hak.setBounds(10, 10, 1570, 40);
         this.add(hak);
@@ -72,8 +83,16 @@ public class Course extends JFrame implements ItemListener, ActionListener {
         this.stuModel = new DefaultTableModel(title, 0);
         this.stuTable = new JTable(this.stuModel);
         this.stuTable.setAutoCreateRowSorter(true);
-        this.stuTable.getColumnModel().getColumn(0).setPreferredWidth(10);
-        this.stuTable.getColumnModel().getColumn(1).setPreferredWidth(10);
+
+        this.stuTable.getColumnModel().getColumn(0).setMinWidth(0);
+        this.stuTable.getColumnModel().getColumn(0).setMaxWidth(0);
+        this.stuTable.getColumnModel().getColumn(0).setWidth(0);
+        this.stuTable.getColumnModel().getColumn(1).setPreferredWidth(50);  // 과목 ID
+        this.stuTable.getColumnModel().getColumn(2).setPreferredWidth(200); // 과목명
+        this.stuTable.getColumnModel().getColumn(3).setPreferredWidth(100); // 담당교수
+        this.stuTable.getColumnModel().getColumn(4).setPreferredWidth(50);  // 정원
+        this.stuTable.getColumnModel().getColumn(5).setPreferredWidth(50);  // 현재 인원
+        this.stuTable.setRowHeight(25);
         JScrollPane js1 = new JScrollPane(this.stuTable);
         js1.setBounds(10, 600, 1570, 290);
         this.add(js1);
@@ -90,7 +109,7 @@ public class Course extends JFrame implements ItemListener, ActionListener {
 
 
         this.logout = new JButton("로그아웃");
-        this.logout.setBounds(500, 10, 100, 30);
+        this.logout.setBounds(150, 10, 100, 30);
         this.logout.addActionListener(this);
         this.add(this.logout);
 
@@ -109,6 +128,11 @@ public class Course extends JFrame implements ItemListener, ActionListener {
         this.adminDel.setBounds(1450, 10, 100, 30);
         this.adminDel.addActionListener(this);
         this.add(this.adminDel);
+
+        this.btnUpdate = new JButton("과목 수정");
+        this.btnUpdate.setBounds(1210, 10, 100, 30);
+        this.btnUpdate.addActionListener(this);
+        this.add(this.btnUpdate);
     }
 
 
@@ -212,7 +236,8 @@ public class Course extends JFrame implements ItemListener, ActionListener {
 
                 if (result > 0) {
                     JOptionPane.showMessageDialog(this, "과목이 삭제되었습니다.");
-                    stuModel.removeRow(row); // Remove from table UI
+                    this.stuTableSelect();
+                    this.courseTableSelect(1);
                 } else {
                     JOptionPane.showMessageDialog(this, "삭제할 과목을 찾을 수 없습니다.");
                 }
@@ -298,6 +323,9 @@ public class Course extends JFrame implements ItemListener, ActionListener {
             Login loginWindow = new Login();
             loginWindow.setVisible(true);
         }
+        else if (ob == this.btnUpdate){
+            updateCourseDialog();
+        }
 
 
 
@@ -309,12 +337,92 @@ public class Course extends JFrame implements ItemListener, ActionListener {
 
     }
 
-    public static void main(String[] args) {
-        new Course("20250000", 1,"수강신청 DB");
+
+    private void updateCourseDialog() {
+        int row = courseTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this,
+                    "수정할 과목을 먼저 선택해주세요.");
+            return;
+        }
+
+        String courseId = (String) courseModel.getValueAt(row, 1); // 과목 ID
+        String courseName = (String) courseModel.getValueAt(row, 2); // 과목명
+        String instructor = (String) courseModel.getValueAt(row, 3); // 담당 교수
+        String maxEnrollmentStr = (String) courseModel.getValueAt(row, 4); // 최대 정원
+
+        JPanel panel = new JPanel(new GridLayout(4, 2));
+        panel.add(new JLabel("새 과목명:"));
+        JTextField nameField = new JTextField(courseName); // 기존 값 설정
+        panel.add(nameField);
+
+        panel.add(new JLabel("새 담당 교수:"));
+        JTextField instField = new JTextField(instructor); // 기존 값 설정
+        panel.add(instField);
+
+        panel.add(new JLabel("새 최대 정원:"));
+        JTextField maxField = new JTextField(maxEnrollmentStr); // 기존 값 설정
+        panel.add(maxField);
+
+        int result = JOptionPane.showConfirmDialog(null,
+                panel,
+                "강의 수정",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                String updatedName = nameField.getText();
+                String updatedInst = instField.getText();
+                int updatedMaxEnrollment =
+                        Integer.parseInt(maxField.getText());
+
+                if (updatedMaxEnrollment <= 0) {
+                    throw new IllegalArgumentException(
+                            "최대 수강 인원은 0보다 커야 합니다.");
+                }
+
+                updateCourseInDatabase(courseId,
+                        updatedName,
+                        updatedInst,
+                        updatedMaxEnrollment);
+
+                JOptionPane.showMessageDialog(this,
+                        "강의가 성공적으로 수정되었습니다.");
+                courseTableSelect(1); // 테이블 새로고침
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                        "강의 수정 중 오류 발생: " + ex.getMessage());
+            }
+        }
     }
 
+    // 데이터베이스에서 강의 정보 업데이트
+    private void updateCourseInDatabase(String courseId,
+                                        String name,
+                                        String instructor,
+                                        int maxEnrollment)
+            throws SQLException {
+        Connection conn = db.getConnecton();
+        PreparedStatement pstmt = null;
 
+        try {
+            String sql =
+                    "UPDATE courses SET course_name=?, instructor=?, max=? WHERE course_id=?";
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, name);
+            pstmt.setString(2, instructor);
+            pstmt.setInt(3, maxEnrollment);
+            pstmt.setInt(4,
+                    Integer.parseInt(courseId)); // 과목 ID
 
+            pstmt.executeUpdate();
+        } finally {
+            db.dbClose(null,
+                    pstmt,
+                    conn); // 리소스 정리
+        }
+    }
 
 
 
@@ -364,7 +472,9 @@ public class Course extends JFrame implements ItemListener, ActionListener {
 
 
 
-
+    public static void main(String[] args) {
+        new Course("20250000", 1, "박현규","수강신청 DB");
+    }
 
 
 

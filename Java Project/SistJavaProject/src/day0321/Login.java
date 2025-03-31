@@ -10,93 +10,103 @@ public class Login extends JFrame {
     private JTextField userIdField;
     private JPasswordField passwordField;
     private JButton loginButton;
-    DbConnect db = new DbConnect();
+    private JLabel titleLabel;
+    private DbConnect db = new DbConnect();
 
-    public Login(){
-
+    public Login() {
         setTitle("Login");
-        setSize(300, 200);
+        setSize(350, 250);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new FlowLayout());
+        setLayout(new GridBagLayout());
+        setLocationRelativeTo(null);
 
-        // Create components
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        titleLabel = new JLabel("수강신청 로그인", SwingConstants.CENTER);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        add(titleLabel, gbc);
+
+        gbc.gridwidth = 1;
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        add(new JLabel("User ID:"), gbc);
+
         userIdField = new JTextField(15);
+        gbc.gridx = 1;
+        add(userIdField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        add(new JLabel("Password:"), gbc);
+
         passwordField = new JPasswordField(15);
+        gbc.gridx = 1;
+        add(passwordField, gbc);
+
         loginButton = new JButton("Login");
-
-        // Add components to the frame
-        add(new JLabel("User ID:"));
-        add(userIdField);
-        add(new JLabel("Password:"));
-        add(passwordField);
-        add(loginButton);
-
-        // Add action listener for the login button
+        loginButton.setFont(new Font("Arial", Font.BOLD, 14));
+        loginButton.setBackground(new Color(50, 150, 250));
+        loginButton.setForeground(Color.WHITE);
+        loginButton.setFocusPainted(false);
+        loginButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
         loginButton.addActionListener(new LoginAction());
-        setLocationRelativeTo(null);  // Center the window
-    }
 
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        add(loginButton, gbc);
+    }
 
     private class LoginAction implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             String userId = userIdField.getText();
-            char[] passwordChars = passwordField.getPassword();
-            String password = new String(passwordChars);
+            String password = new String(passwordField.getPassword());
 
-            int isAdmin = -1;
-            // Validate user credentials
             if (validateLogin(userId, password)) {
-                isAdmin = getUserAdminStatus(userId);
+                int isAdmin = getUserAdminStatus(userId);
+                String name = getUserName(userId);
                 JOptionPane.showMessageDialog(Login.this, "로그인 성공!");
                 setVisible(false);
                 dispose();
-
-                // Create and show the course window, passing userId and isAdmin
-                Course courseWindow = new Course(userId, isAdmin, "수강신청 폼");
-                courseWindow.setVisible(true);
+                new Course(userId, isAdmin, name, "Course Registration").setVisible(true);
             } else {
-                JOptionPane.showMessageDialog(Login.this, "Invalid credentials. Please try again.");
+                JOptionPane.showMessageDialog(Login.this, "비밀번호가 틀립니다. 다시 로그인해주세요.", "Login Failed", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    // Validate the login credentials from the database
     private boolean validateLogin(String userId, String password) {
-        try (Connection conn = this.db.getConnecton()) {
+        try (Connection conn = db.getConnecton()) {
             String query = "SELECT * FROM students WHERE user_id = ? AND password = ?";
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setString(1, userId);
                 stmt.setString(2, password);
-
                 try (ResultSet rs = stmt.executeQuery()) {
-                    return rs.next(); // If result is found, login is successful
+                    return rs.next();
                 }
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage());
-            return false;
         }
+        return false;
     }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new Login().setVisible(true);
-        });
-    }
-
-
 
     private int getUserAdminStatus(String userId) {
-        try (Connection conn = this.db.getConnecton()) {
+        try (Connection conn = db.getConnecton()) {
             String query = "SELECT isAdmin FROM students WHERE user_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setString(1, userId);
-
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        return rs.getInt("isAdmin"); // Return the isAdmin value
+                        return rs.getInt("isAdmin");
                     }
                 }
             }
@@ -104,8 +114,28 @@ public class Login extends JFrame {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage());
         }
-        return -1; // Return a default value in case of an error or no result
+        return -1;
     }
 
+    private String getUserName(String userId) {
+        try (Connection conn = db.getConnecton()) {
+            String query = "SELECT name FROM students WHERE user_id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, userId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("name");
+                    }
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage());
+        }
+        return "";
+    }
 
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new Login().setVisible(true));
+    }
 }
